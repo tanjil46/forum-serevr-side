@@ -45,6 +45,43 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
 
+    const userPostCollection=client.db('forumDB').collection('userPost')
+    const totalUserCollection=client.db('forumDB').collection('user')
+
+    // user post
+
+    app.post('/userpost',async(req,res)=>{
+      const userPost=req.body
+      console.log('user post',userPost)
+      const result=await userPostCollection.insertOne(userPost)
+      res.send(result)
+    })
+ 
+  app.get('/userpost',async(req,res)=>{
+  //  const email=req.query.email
+  //  const query={email:email}
+  //  console.log(query)
+   const result=await userPostCollection.find().toArray()
+   res.send(result)
+
+
+
+
+  })
+      
+
+
+
+  app.get('/post-count/:email',async(req,res)=>{
+    const userEmail=req.params.email
+    const query={email:userEmail}
+    const toTalPost=await userPostCollection.countDocuments(query)
+    res.send({toTalPost})
+  })
+
+
+
+
 
 
 
@@ -59,6 +96,35 @@ res.send({token})
 
   })
 
+
+
+
+
+
+ //User post
+
+
+ 
+app.post('/users',async(req,res)=>{
+  const user=req.body
+  console.log('users',user)
+  const query={email:user.email}
+  const isUserMatch=await totalUserCollection.findOne(query)
+  if(isUserMatch){
+    return res.send({message:'User already Exits',insertedId:null})
+  }
+  const result=await totalUserCollection.insertOne(user)
+  res.send(result)
+  
+  })
+
+
+
+  app.get('/users',async(req,res)=>{
+  
+    const result= await totalUserCollection.find().toArray()
+    res.send(result)
+  })
 
 
 
@@ -87,7 +153,7 @@ res.send({token})
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
