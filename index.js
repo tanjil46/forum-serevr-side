@@ -1,5 +1,5 @@
 const express=require('express')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 var jwt = require('jsonwebtoken');
 const app=express()
 const port=process.env.PORT || 5000;
@@ -48,6 +48,53 @@ async function run() {
     const userPostCollection=client.db('forumDB').collection('userPost')
     const totalUserCollection=client.db('forumDB').collection('user')
     const paymentCollection=client.db('forumDB').collection('payment')
+    const announcemetCollection=client.db('forumDB').collection('announce')
+
+
+
+
+    // MIDDLEWARE VERYFYTOKEN
+
+
+    const verifyToken=(req,res,next)=>{
+       console.log('Inside the verify token',req.headers.authorization)
+      if(!req.headers.authorization){
+        return res.status(401).send({message:'Forbidden access'})
+      }
+      const token=req.headers.authorization.split(' ')[1]
+   
+    jwt.verify(token, process.env.SECRET_TOKEN,(err, decoded) =>{
+    if(err){
+      return res.status(401).send({message:'Forbidden access'})
+    }
+    req.decoded=decoded
+    next()
+    })
+    
+    
+    
+    
+    }
+    
+
+
+
+                  //VERYFYADMIN
+
+
+
+                  const verifyAdmin=async(req,res,next)=>{
+                    const email=req?.decoded?.email
+                    const query={email:email}
+                    const user=await totalUserCollection.findOne(query)
+                    const isAdmin=user?.role==='admin'
+                    if(!isAdmin){
+                      return res.status(403).send({message:'Forbidden access'})
+                    }
+                    next()
+                  }
+
+
 
     // user post
 
@@ -70,6 +117,18 @@ async function run() {
 
   })
       
+
+//USER POST WITH TAG
+
+// app.get('/userpost/:tag',async(req,res)=>{
+// const tag=req.params.tag
+// const tagPost=await userPostCollection.find({tags:tag}).toArray()
+// res.send(tagPost)
+
+
+// })
+
+
 
 
 
@@ -127,7 +186,15 @@ app.post('/users',async(req,res)=>{
     res.send(result)
   })
 
-
+//PER USER POST
+  app.get('/userpost/:email',verifyToken,async(req,res)=>{
+    const query={email:req.params.email}
+    if(req.params.email !== req.decoded.email){
+      return res.status(403).send({message:'FORBIDDEN ACCESS'})
+    }
+    const result= await totalUserCollection.find().toArray()
+    res.send(result)
+  })
 
 
     //PAYMENT CLIENT SECRET
@@ -154,9 +221,111 @@ app.post('/users',async(req,res)=>{
 
 
 
+    app.post('/payment',async(req,res)=>{
+      const paymentInfo=req.body
+      console.log('payment info uploaded',paymentInfo)
+      const result=await paymentCollection.insertOne(paymentInfo)
+      // const query={_id:{
+      //   $in:paymentInfo.cartId.map(id=>new ObjectId(id))
+      // }}
+      // const deleteResult=await cartCollection.deleteMany(query)
+      
+      
+      res.send(result)
+      
+
+    })
 
 
 
+    app.get('/payment/:email',verifyToken,async(req,res)=>{
+      const query={email:req.params.email}
+      if(req.params.email !== req.decoded.email){
+        return res.status(403).send({message:'FORBIDDEN ACCESS'})
+      }
+      const result=await paymentCollection.find(query).toArray()
+      res.send(result)
+    })
+
+
+    //PAYMENT USER FOR ADMIN
+  app.get('/payment',async(req,res)=>{
+  const result=await paymentCollection.find().toArray()
+  res.send(result)
+
+  })
+
+
+
+
+
+
+
+ //USER OR ADMIN
+
+
+
+ app.get('/user/admin/:email',verifyToken,async(req,res)=>{
+  const email=req.params.email;
+  if(email!==req.decoded.email){
+   return res.status(403).send({message:'Unothrozied access'})
+  }
+  const query={email:email}
+  const user=await totalUserCollection.findOne(query)
+  let admin=false;
+  if(user){
+    admin=user?.role==='admin'
+  }
+  res.send({admin})
+  
+  })
+  
+
+
+  
+
+app.patch('/users/admin/:name',async(req,res)=>{
+  const name=req.params.name
+  const filter={name:name}
+  const updateDoc={
+
+$set:{
+  role:'admin'
+}
+ }
+ const result=await totalUserCollection.updateOne(filter,updateDoc)
+ res.send(result)
+})
+
+
+
+
+     //ADMIN ANNUNCEMENT
+
+app.post('/annouce',async(req,res)=>{
+  const annouceInfo=req.body
+  console.log('Annocement',annouceInfo)
+  const result =await announcemetCollection.insertOne(annouceInfo)
+  res.send(result)
+})
+
+
+app.get('/annonce',async(req,res)=>{
+  const result=await announcemetCollection.find().toArray()
+  res.send(result)
+})
+
+
+    //ANNONCEMENT-COUNT
+
+
+
+
+    app.get('/annonce-count',async(req,res)=>{
+      const totalA=await announcemetCollection.estimatedDocumentCount()
+      res.send({totalA})
+
+    })
 
 
 
