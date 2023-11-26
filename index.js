@@ -49,7 +49,7 @@ async function run() {
     const totalUserCollection=client.db('forumDB').collection('user')
     const paymentCollection=client.db('forumDB').collection('payment')
     const announcemetCollection=client.db('forumDB').collection('announce')
-
+    const commentCollection=client.db('forumDB').collection('comments')
 
 
 
@@ -105,18 +105,52 @@ async function run() {
       res.send(result)
     })
  
-  app.get('/userpost',async(req,res)=>{
-  //  const email=req.query.email
-  //  const query={email:email}
-  //  console.log(query)
-   const result=await userPostCollection.find().toArray()
-   res.send(result)
+//   app.get('/userpost',async(req,res)=>{
+//   const page = parseInt(req.query.page) || 1;
+//   const size = 5;
+//   const skip = (page - 1) * size;
+
+//   const result=await userPostCollection.aggregate([
+//     {
+//       $addFields: {
+//         voteDifference: { $subtract: ['$upVote', '$downVote'] }
+//       }
+//     },
+//     {
+//       $sort: { voteDifference: -1 }
+//     },
+//     {
+//       $skip: skip
+//     },
+//     {
+//       $limit: size
+//     }
+  
+
+//   ]).toArray()
 
 
 
 
-  })
+// res.send(result)
+
+
+
+//   })
       
+app.get('/totalpost',async(req,res)=>{
+  const result=await userPostCollection.estimatedDocumentCount()
+  res.send({result})
+})
+
+
+
+
+
+
+
+
+
 
 //USER POST WITH TAG
 
@@ -326,6 +360,73 @@ app.get('/annonce',async(req,res)=>{
       res.send({totalA})
 
     })
+
+
+
+
+
+    //COMMETS 
+
+    app.post('/comment',async(req,res)=>{
+      const commentInfo=req.body;
+      console.log('commets posted',commentInfo)
+      const result=await commentCollection.insertOne(commentInfo)
+      res.send(result)
+    })
+
+
+
+
+    app.get('/comment-count/:title',async(req,res)=>{
+      const commentTitle=req.params.title
+      const query={cTitle:commentTitle}
+      const toTalComments=await commentCollection.countDocuments(query)
+      res.send({toTalComments})
+    })
+  
+
+
+       //UPVOTE DOWNVOTE
+
+
+       app.patch('/userpost/upvote/:id',async(req,res)=>{
+        const id=req.params.id
+        const filter={_id:new ObjectId(id)}
+        const updateDoc={
+      
+      $inc:{
+        upVote:1,
+        
+      }
+       }
+       const resultUp=await userPostCollection.updateOne(filter,updateDoc)
+       res.send(resultUp)
+      })
+      
+      
+
+
+      app.patch('/userpost/downvote/:id',async(req,res)=>{
+        const id=req.params.id
+        const filter={_id:new ObjectId(id)}
+        const updateDoc={
+      
+      $inc:{
+       downVote:1,
+      }
+       }
+       const resultDown=await userPostCollection.updateOne(filter,updateDoc)
+       res.send(resultDown)
+      })
+
+
+
+
+      //CALCULATE VOTE AND DOWN FOR POPULARITY
+
+     app.get('/userpost-populary')
+
+
 
 
 
