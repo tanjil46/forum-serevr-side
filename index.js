@@ -50,14 +50,14 @@ async function run() {
     const paymentCollection=client.db('forumDB').collection('payment')
     const announcemetCollection=client.db('forumDB').collection('announce')
     const commentCollection=client.db('forumDB').collection('comments')
-
-
+    const reportCollection=client.db('forumDB').collection('reports')
+    const tagCollection=client.db('forumDB').collection('tags')
 
     // MIDDLEWARE VERYFYTOKEN
 
 
     const verifyToken=(req,res,next)=>{
-       console.log('Inside the verify token',req.headers.authorization)
+      //  console.log('Inside the verify token',req.headers.authorization)
       if(!req.headers.authorization){
         return res.status(401).send({message:'Forbidden access'})
       }
@@ -105,39 +105,95 @@ async function run() {
       res.send(result)
     })
  
-//   app.get('/userpost',async(req,res)=>{
-//   const page = parseInt(req.query.page) || 1;
-//   const size = 5;
-//   const skip = (page - 1) * size;
+  app.get('/userpost',async(req,res)=>{
 
-//   const result=await userPostCollection.aggregate([
-//     {
-//       $addFields: {
-//         voteDifference: { $subtract: ['$upVote', '$downVote'] }
-//       }
-//     },
-//     {
-//       $sort: { voteDifference: -1 }
-//     },
-//     {
-//       $skip: skip
-//     },
-//     {
-//       $limit: size
-//     }
+const result=await userPostCollection.find().toArray()
+
+
+
+
+
+
+
+
+
+
+//   const page = parseInt(req.query.page) || 1;
+//   const size = 5
+//  console.log('pagination',req.query)
+//   const result=await userPostCollection.find()
+//   .skip((page-1)*size)
+//   .limit(size)
+//   .toArray()
   
 
-//   ]).toArray()
 
 
 
 
-// res.send(result)
+  // const result=await userPostCollection.aggregate([
+  //   {
+  //     $addFields: {
+  //       voteDifference: { $subtract: ['$upVote', '$downVote'] }
+  //     }
+  //   },
+  //   {
+  //     $sort: { voteDifference: -1 }
+  //   },
+  //   {
+  //     $skip: skip
+  //   },
+  //   {
+  //     $limit: size
+  //   }
+  
+
+  // ]).toArray()
 
 
 
-//   })
+
+res.send(result)
+
+
+
+  })
       
+
+
+
+app.get('/popular',async(req,res)=>{
+
+
+
+  const result=await userPostCollection.aggregate([
+    {
+      $addFields: {
+        voteDifference: { $subtract: ['$upVote', '$downVote'] }
+      }
+    },
+    {
+      $sort: { voteDifference: -1 }
+    }
+  
+
+  ]).toArray()
+
+
+res.send(result)
+
+})
+
+
+
+
+
+
+
+
+
+
+
 app.get('/totalpost',async(req,res)=>{
   const result=await userPostCollection.estimatedDocumentCount()
   res.send({result})
@@ -221,12 +277,13 @@ app.post('/users',async(req,res)=>{
   })
 
 //PER USER POST
-  app.get('/userpost/:email',verifyToken,async(req,res)=>{
-    const query={email:req.params.email}
-    if(req.params.email !== req.decoded.email){
-      return res.status(403).send({message:'FORBIDDEN ACCESS'})
-    }
-    const result= await totalUserCollection.find().toArray()
+  app.get('/userpost/:email',async(req,res)=>{
+    const email=req.params.email
+    const query={email:email}
+    // if(req.params.email !== req.decoded.email){
+    //   return res.status(403).send({message:'FORBIDDEN ACCESS'})
+    // }
+    const result= await userPostCollection.find(query).toArray()
     res.send(result)
   })
 
@@ -274,9 +331,9 @@ app.post('/users',async(req,res)=>{
 
     app.get('/payment/:email',verifyToken,async(req,res)=>{
       const query={email:req.params.email}
-      if(req.params.email !== req.decoded.email){
-        return res.status(403).send({message:'FORBIDDEN ACCESS'})
-      }
+      // if(req.params.email !== req.decoded.email){
+      //   return res.status(403).send({message:'FORBIDDEN ACCESS'})
+      // }
       const result=await paymentCollection.find(query).toArray()
       res.send(result)
     })
@@ -385,6 +442,40 @@ app.get('/annonce',async(req,res)=>{
     })
   
 
+ 
+
+
+
+
+
+
+
+
+
+
+ app.get('/usercomment/:title',async(req,res)=>{
+  const commentTitle=req.params.title
+      const query={cTitle:commentTitle}
+  const result=await commentCollection.find(query).toArray()
+  res.send(result)
+ })
+
+
+  //DELETE POST
+
+
+  app.delete('/userpost/:id',async(req,res)=>{
+    const id=req.params.id
+    const query={_id:new ObjectId(id)}
+    const result=await userPostCollection.deleteOne(query)
+    res.send(result)
+  })
+
+
+
+
+
+
 
        //UPVOTE DOWNVOTE
 
@@ -422,18 +513,59 @@ app.get('/annonce',async(req,res)=>{
 
 
 
-      //CALCULATE VOTE AND DOWN FOR POPULARITY
+      
+      // REPORT COMMENT
 
-     app.get('/userpost-populary')
+      app.post('/report',async(req,res)=>{
+      const reportInfo=req.body
+      console.log('report info',reportInfo)
+      const result=await reportCollection.insertOne(reportInfo)
+      res.send(result)
+
+      })
+     
+
+    app.get('/report',async(req,res)=>{
+      const result=await reportCollection.find().toArray()
+      res.send(result)
+    })
+
+
+
+    //COUNT ALL COLLECTION
+
+   app.get('/admin-stats',async(req,res)=>{
+  const totalpost=await userPostCollection.estimatedDocumentCount()
+  const totalcomment=await commentCollection.estimatedDocumentCount()
+  const totalusers=await totalUserCollection.estimatedDocumentCount()
+ res.send({
+  totalpost,totalusers,totalcomment
+ })
 
 
 
 
 
+   })
+
+
+      //TAG POST
+
+app.post('/addtag',async(req,res)=>{
+
+const tagInfo=req.body
+console.log('tags added',tagInfo)
+const result=await tagCollection.insertOne(tagInfo)
+res.send(result)
 
 
 
+})
 
+app.get('/addtag',async(req,res)=>{
+const result=await tagCollection.find().toArray()
+res.send(result)
+})
 
 
 
