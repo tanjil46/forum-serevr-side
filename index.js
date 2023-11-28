@@ -52,7 +52,7 @@ async function run() {
     const commentCollection=client.db('forumDB').collection('comments')
     const reportCollection=client.db('forumDB').collection('reports')
     const tagCollection=client.db('forumDB').collection('tags')
-
+    const banCollection=client.db('forumDB').collection('ban')
     // MIDDLEWARE VERYFYTOKEN
 
 
@@ -111,48 +111,6 @@ const result=await userPostCollection.find().toArray()
 
 
 
-
-
-
-
-
-
-
-//   const page = parseInt(req.query.page) || 1;
-//   const size = 5
-//  console.log('pagination',req.query)
-//   const result=await userPostCollection.find()
-//   .skip((page-1)*size)
-//   .limit(size)
-//   .toArray()
-  
-
-
-
-
-
-  // const result=await userPostCollection.aggregate([
-  //   {
-  //     $addFields: {
-  //       voteDifference: { $subtract: ['$upVote', '$downVote'] }
-  //     }
-  //   },
-  //   {
-  //     $sort: { voteDifference: -1 }
-  //   },
-  //   {
-  //     $skip: skip
-  //   },
-  //   {
-  //     $limit: size
-  //   }
-  
-
-  // ]).toArray()
-
-
-
-
 res.send(result)
 
 
@@ -205,18 +163,6 @@ app.get('/totalpost',async(req,res)=>{
 
 
 
-
-
-
-//USER POST WITH TAG
-
-// app.get('/userpost/:tag',async(req,res)=>{
-// const tag=req.params.tag
-// const tagPost=await userPostCollection.find({tags:tag}).toArray()
-// res.send(tagPost)
-
-
-// })
 
 
 
@@ -280,9 +226,7 @@ app.post('/users',async(req,res)=>{
   app.get('/userpost/:email',async(req,res)=>{
     const email=req.params.email
     const query={email:email}
-    // if(req.params.email !== req.decoded.email){
-    //   return res.status(403).send({message:'FORBIDDEN ACCESS'})
-    // }
+   
     const result= await userPostCollection.find(query).toArray()
     res.send(result)
   })
@@ -316,11 +260,7 @@ app.post('/users',async(req,res)=>{
       const paymentInfo=req.body
       console.log('payment info uploaded',paymentInfo)
       const result=await paymentCollection.insertOne(paymentInfo)
-      // const query={_id:{
-      //   $in:paymentInfo.cartId.map(id=>new ObjectId(id))
-      // }}
-      // const deleteResult=await cartCollection.deleteMany(query)
-      
+    
       
       res.send(result)
       
@@ -340,7 +280,7 @@ app.post('/users',async(req,res)=>{
 
 
     //PAYMENT USER FOR ADMIN
-  app.get('/payment',async(req,res)=>{
+  app.get('/payment',verifyToken,async(req,res)=>{
   const result=await paymentCollection.find().toArray()
   res.send(result)
 
@@ -356,10 +296,10 @@ app.post('/users',async(req,res)=>{
 
 
 
- app.get('/user/admin/:email',verifyToken,async(req,res)=>{
+ app.get('/user/admin/:email',verifyToken,verifyAdmin,async(req,res)=>{
   const email=req.params.email;
-  if(email!==req.decoded.email){
-   return res.status(403).send({message:'Unothrozied access'})
+   if(email!==req.decoded.email){
+    return res.status(403).send({message:'Unothrozied access'})
   }
   const query={email:email}
   const user=await totalUserCollection.findOne(query)
@@ -375,7 +315,7 @@ app.post('/users',async(req,res)=>{
 
   
 
-app.patch('/users/admin/:name',async(req,res)=>{
+app.patch('/users/admin/:name',verifyToken,verifyAdmin,async(req,res)=>{
   const name=req.params.name
   const filter={name:name}
   const updateDoc={
@@ -387,6 +327,32 @@ $set:{
  const result=await totalUserCollection.updateOne(filter,updateDoc)
  res.send(result)
 })
+
+
+
+
+
+
+app.patch('/users/:email',async(req,res)=>{
+  const badgeInfo=req.body
+  const email=req.params.email
+  const filter={email:email}
+  const updateDoc={
+
+$set:{
+  badge:badgeInfo.badge
+}
+ }
+ const result=await totalUserCollection.updateOne(filter,updateDoc)
+ res.send(result)
+})
+
+
+
+
+
+
+
 
 
 
@@ -434,7 +400,7 @@ app.get('/annonce',async(req,res)=>{
 
 
 
-    app.get('/comment-count/:title',async(req,res)=>{
+    app.get('/comment-count/:title',verifyToken,async(req,res)=>{
       const commentTitle=req.params.title
       const query={cTitle:commentTitle}
       const toTalComments=await commentCollection.countDocuments(query)
@@ -525,7 +491,7 @@ app.get('/annonce',async(req,res)=>{
       })
      
 
-    app.get('/report',async(req,res)=>{
+    app.get('/report',verifyToken,async(req,res)=>{
       const result=await reportCollection.find().toArray()
       res.send(result)
     })
@@ -567,6 +533,29 @@ const result=await tagCollection.find().toArray()
 res.send(result)
 })
 
+
+app.post('/banuser',async(req,res)=>{
+  const banInfo=req.body
+  console.log('ban user',banInfo)
+  const result=await banCollection.insertOne(banInfo)
+  res.send(result)
+})
+
+
+
+
+app.delete('/report/:id',async(req,res)=>{
+  const id=req.params.id
+  const query={_id:new ObjectId(id)}
+  const result =await reportCollection.deleteOne(query)
+  res.send(result)
+})
+
+
+app.get('/banuser',verifyToken,async(req,res)=>{
+  const banUser=await banCollection.find().toArray()
+  res.send(banUser)
+})
 
 
     await client.db("admin").command({ ping: 1 });
