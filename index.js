@@ -271,9 +271,7 @@ app.post('/users',async(req,res)=>{
 
     app.get('/payment/:email',verifyToken,async(req,res)=>{
       const query={email:req.params.email}
-      // if(req.params.email !== req.decoded.email){
-      //   return res.status(403).send({message:'FORBIDDEN ACCESS'})
-      // }
+     
       const result=await paymentCollection.find(query).toArray()
       res.send(result)
     })
@@ -400,7 +398,7 @@ app.get('/annonce',async(req,res)=>{
 
 
 
-    app.get('/comment-count/:title',verifyToken,async(req,res)=>{
+    app.get('/comment-count/:title',async(req,res)=>{
       const commentTitle=req.params.title
       const query={cTitle:commentTitle}
       const toTalComments=await commentCollection.countDocuments(query)
@@ -491,7 +489,7 @@ app.get('/annonce',async(req,res)=>{
       })
      
 
-    app.get('/report',verifyToken,async(req,res)=>{
+    app.get('/report',async(req,res)=>{
       const result=await reportCollection.find().toArray()
       res.send(result)
     })
@@ -552,7 +550,7 @@ app.delete('/report/:id',async(req,res)=>{
 })
 
 
-app.get('/banuser',verifyToken,async(req,res)=>{
+app.get('/banuser',async(req,res)=>{
   const banUser=await banCollection.find().toArray()
   res.send(banUser)
 })
